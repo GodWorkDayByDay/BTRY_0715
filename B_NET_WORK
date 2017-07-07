@@ -1,0 +1,42 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+
+namespace BatteryTestDevice.ExternalDevice
+{
+    public class BMSNetwork : Network
+    {
+        private readonly int m_port = 9001;
+
+         public override void Init()
+        {
+            try
+            {
+                uint dummy = 0;
+                byte[] inOptionValues = new byte[System.Runtime.InteropServices.Marshal.SizeOf(dummy) * 3];
+                BitConverter.GetBytes((uint)1).CopyTo(inOptionValues, 0);
+                BitConverter.GetBytes((uint)3000).CopyTo(inOptionValues, System.Runtime.InteropServices.Marshal.SizeOf(dummy));
+                BitConverter.GetBytes((uint)3000).CopyTo(inOptionValues, System.Runtime.InteropServices.Marshal.SizeOf(dummy) * 2);
+
+                this.m_serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                this.m_serverSocket.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
+                EndPoint endPoint = new IPEndPoint(IPAddress.Any, m_port);
+                this.m_serverSocket.Bind(endPoint);
+                this.m_serverSocket.Listen(500);
+            }
+            catch (Exception ex)
+            {
+                Hynn.Common.Logger.Log.Logging(System.Reflection.MethodBase.GetCurrentMethod())
+                    .Info("当前域发生没有处理的异常", ex);
+            }
+            finally
+            {
+                m_serverSocket.BeginAccept(AcceptAsyncCallback, m_serverSocket);
+            }
+        }
+
+    }
+}
